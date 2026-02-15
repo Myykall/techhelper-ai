@@ -213,8 +213,22 @@ async def chat(request: ChatRequest):
     
     # Get AI response
     if ai_provider is None:
-        # Mock mode for testing
-        response_text = "(AI provider not configured - this is a test response)"
+        # Mock mode for testing - provide realistic responses
+        user_msg = request.message.lower()
+        if "password" in user_msg or "forgot" in user_msg:
+            response_text = "I can help you reset your password! Let's do this step by step. First, can you tell me which service you need the password for? Is it Gmail, Yahoo, or something else?"
+        elif "email" in user_msg:
+            response_text = "I'd be happy to help with your email! What seems to be the problem? Are you having trouble sending emails, or can't you log in?"
+        elif "video" in user_msg or "call" in user_msg or "zoom" in user_msg:
+            response_text = "Video calling is a great way to stay in touch! Are you trying to use Zoom, FaceTime, or something else? And are you on a phone, tablet, or computer?"
+        elif "phone" in user_msg or "tablet" in user_msg:
+            response_text = "I can help with your device! What kind of phone or tablet do you have - is it an iPhone, iPad, Android phone, or something else?"
+        elif "computer" in user_msg or "laptop" in user_msg:
+            response_text = "Computer issues can be frustrating! Can you describe what you're trying to do and what's happening instead?"
+        elif "hello" in user_msg or "hi" in user_msg:
+            response_text = "Hello! I'm TechHelper, your friendly tech support assistant. What can I help you with today?"
+        else:
+            response_text = "I understand you need help with that. Let me see what I can do. Could you tell me a bit more about the problem? What were you trying to do when you got stuck?"
     else:
         try:
             response_text = await ai_provider.chat(session.messages)
