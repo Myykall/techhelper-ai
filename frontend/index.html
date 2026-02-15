@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechHelper AI - Friendly Tech Support</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">🤖 TechHelper</div>
+            <div class="subtitle">Friendly Tech Support for Everyone</div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="screen active">
+                <div class="welcome-message">
+                    <h1>Need Help With Technology?</h1>
+                    <p class="large-text">I'm here to help you with:</p>
+                    <ul class="help-list">
+                        <li>📧 Email problems</li>
+                        <li>📱 Phone or tablet issues</li>
+                        <li>💻 Computer questions</li>
+                        <li>🎥 Video calls (Zoom, FaceTime)</li>
+                        <li>🔒 Passwords and security</li>
+                    </ul>
+                </div>
+                <button id="start-btn" class="big-button primary">
+                    <span class="btn-icon">🎤</span>
+                    <span class="btn-text">Talk to Me</span>
+                </button>
+                <p class="hint">Or tap here to type your question</p>
+            </div>
+
+            <!-- Chat Screen -->
+            <div id="chat-screen" class="screen">
+                <!-- Messages Area -->
+                <div id="messages" class="messages">
+                    <!-- Messages will be added here -->
+                </div>
+
+                <!-- Typing Indicator -->
+                <div id="typing-indicator" class="typing-indicator hidden">
+                    <span>Thinking</span>
+                    <span class="dots">...</span>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <button class="quick-btn" data-message="I forgot my password">Forgot password</button>
+                    <button class="quick-btn" data-message="Help me with email">Email help</button>
+                    <button class="quick-btn" data-message="I want to video call">Video call</button>
+                    <button class="quick-btn" data-message="Can you say that again?">Say again</button>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-area">
+                    <button id="mic-btn" class="icon-button" title="Tap to speak">
+                        🎤
+                    </button>
+                    <input 
+                        type="text" 
+                        id="message-input" 
+                        placeholder="Type your question here..."
+                        autocomplete="off"
+                    >
+                    <button id="send-btn" class="icon-button" title="Send message">
+                        ➤
+                    </button>
+                </div>
+
+                <!-- Listening Indicator -->
+                <div id="listening-indicator" class="listening-indicator hidden">
+                    <div class="pulse"></div>
+                    <span>I'm listening... Tap microphone when done</span>
+                </div>
+
+                <!-- Control Bar -->
+                <div class="control-bar">
+                    <button id="speak-slowly-btn" class="control-btn">
+                        🐢 Speak Slowly
+                    </button>
+                    <button id="read-last-btn" class="control-btn">
+                        🔁 Read Last Answer
+                    </button>
+                    <button id="human-help-btn" class="control-btn danger">
+                        🙋‍♂️ Get Human Help
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Having trouble? Call us: <strong>1-800-TECH-HELP</strong></p>
+        </footer>
+    </div>
+
+    <!-- Human Help Modal -->
+    <div id="human-help-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>🙋‍♂️ Request Human Help</h2>
+            <p>Would you like a real person to call you back?</p>
+            <input 
+                type="tel" 
+                id="phone-input" 
+                placeholder="Enter your phone number"
+                class="big-input"
+            >
+            <div class="modal-buttons">
+                <button id="cancel-help-btn" class="big-button secondary">No, Go Back</button>
+                <button id="confirm-help-btn" class="big-button primary">Yes, Call Me</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
