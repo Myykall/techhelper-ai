@@ -140,15 +140,25 @@ async def lifespan(app: FastAPI):
     global ai_provider
     
     provider_name = os.getenv("AI_PROVIDER", "ollama")
-    print(f"🤖 Initializing AI provider: {provider_name}")
+    mock_mode = os.getenv("MOCK_MODE", "false").lower() == "true"
     
-    try:
-        ai_provider = get_provider(provider_name)
-        print(f"✅ AI provider ready: {provider_name}")
-    except Exception as e:
-        print(f"⚠️ Failed to initialize {provider_name}: {e}")
-        print("Falling back to mock responses for testing")
+    if mock_mode:
+        print("🧪 Running in MOCK MODE (no AI API needed)")
+        print("   Set MOCK_MODE=false and configure AI_PROVIDER when ready for production")
         ai_provider = None
+    else:
+        print(f"🤖 Initializing AI provider: {provider_name}")
+        
+        try:
+            ai_provider = get_provider(provider_name)
+            # Test the connection
+            test_response = await ai_provider.chat([Message(role="user", content="Hi")])
+            print(f"✅ AI provider ready: {provider_name}")
+        except Exception as e:
+            print(f"⚠️ Failed to initialize {provider_name}: {e}")
+            print("🧪 Falling back to MOCK MODE for testing")
+            print(f"   To use real AI: Set up {provider_name} or get an API key")
+            ai_provider = None
     
     yield
     
