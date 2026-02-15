@@ -73,6 +73,10 @@ function stopSpeaking() {
 }
 
 // ============== Speech Recognition ==============
+let recordingTimeout = null;
+let restartAttempts = 0;
+const MAX_RESTART_ATTEMPTS = 3;
+
 function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
@@ -86,12 +90,35 @@ function initSpeechRecognition() {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
+    // Increase timeout - some browsers stop after silence
+    // Note: maxAlternatives not standard but try anyway
     
     recognition.onstart = () => {
         isRecording = true;
+        restartAttempts = 0;
         elements.micBtn.classList.add('recording');
         elements.listeningIndicator.classList.remove('hidden');
-        elements.messageInput.placeholder = 'Listening...';
+        elements.messageInput.placeholder = 'Listening... Speak clearly';
+        
+        // Clear any existing timeout
+        if (recordingTimeout) {
+            clearTimeout(recordingTimeout);
+        }
+        
+        // Auto-stop after 30 seconds of recording (safety)
+        recordingTimeout = setTimeout(() => {
+            if (isRecording) {
+                console.log('Auto-stopping after 30 seconds');
+                stopRecording();
+                // Auto-send if there's text
+                const text = elements.messageInput.value.trim();
+                if (text) {
+                    sendMessage(text);
+                }
+            }
+        }, 30000);
+        
+        console.log('Recording started - tap microphone again when done speaking');
     };
     
     recognition.onresult = (event) => {
@@ -113,25 +140,46 @@ function initSpeechRecognition() {
         
         if (finalTranscript) {
             elements.messageInput.value = finalTranscript;
+            // Update placeholder to show we're still listening
+            elements.messageInput.placeholder = 'Still listening... tap mic when done';
         }
     };
     
     recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
+        
+        // Don't stop for 'no-speech' or 'audio-capture' errors, just log them
         if (event.error === 'not-allowed') {
             showMessage('error', 'Please allow microphone access to use voice input.');
+            stopRecording();
+        } else if (event.error === 'network') {
+            showMessage('error', 'Network error. Please try typing instead.');
+            stopRecording();
         }
-        stopRecording();
+        // For other errors like 'no-speech', 'aborted', we try to restart
     };
     
     recognition.onend = () => {
-        if (isRecording) {
-            // Auto-restart if still recording
-            try {
-                recognition.start();
-            } catch (e) {
-                stopRecording();
-            }
+        console.log('Speech recognition ended, isRecording:', isRecording);
+        
+        if (isRecording && restartAttempts < MAX_RESTART_ATTEMPTS) {
+            // Try to restart if we're still supposed to be recording
+            restartAttempts++;
+            console.log('Attempting to restart recording, attempt:', restartAttempts);
+            
+            setTimeout(() => {
+                try {
+                    if (isRecording && recognition) {
+                        recognition.start();
+                    }
+                } catch (e) {
+                    console.error('Failed to restart:', e);
+                    stopRecording();
+                }
+            }, 100);
+        } else if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
+            console.log('Max restart attempts reached, stopping');
+            stopRecording();
         }
     };
     
@@ -155,9 +203,17 @@ function startRecording() {
 
 function stopRecording() {
     isRecording = false;
+    restartAttempts = 0;
+    
+    if (recordingTimeout) {
+        clearTimeout(recordingTimeout);
+        recordingTimeout = null;
+    }
+    
     if (recognition) {
         try {
             recognition.stop();
+            recognition.abort(); // Force stop
         } catch (e) {
             // Already stopped
         }
@@ -165,6 +221,7 @@ function stopRecording() {
     elements.micBtn.classList.remove('recording');
     elements.listeningIndicator.classList.add('hidden');
     elements.messageInput.placeholder = 'Type your question here...';
+    console.log('Recording stopped');
 }
 
 // ============== WebSocket ==============
@@ -407,16 +464,25 @@ function initEventListeners() {
         }
     });
     
-    // Microphone
+    // Microphone - Toggle recording
     elements.micBtn.addEventListener('click', () => {
         if (isRecording) {
-            // Stop and send
-            const message = elements.messageInput.value;
+            // Stop recording and auto-send if we have text
+            const message = elements.messageInput.value.trim();
             stopRecording();
-            if (message.trim()) {
+            
+            if (message) {
+                console.log('Auto-sending voice message:', message);
                 sendMessage(message);
+            } else {
+                // No text captured, let user know
+                elements.messageInput.placeholder = 'No speech detected. Please try again.';
+                speak('I did not hear anything. Please try speaking again.');
             }
         } else {
+            // Clear any previous text and start fresh
+            elements.messageInput.value = '';
+            elements.messageInput.placeholder = 'Listening... Speak now';
             startRecording();
         }
     });
