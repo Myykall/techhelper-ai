@@ -59,40 +59,28 @@
 
                 <!-- Input Area -->
                 <div class="input-area">
-                    <button id="mic-btn" class="icon-button" title="Tap to speak">
-                        🎤
-                    </button>
                     <input 
                         type="text" 
                         id="message-input" 
-                        placeholder="Type your question here..."
+                        placeholder="Tap here and type your question..."
                         autocomplete="off"
                     >
-                    <button id="send-btn" class="icon-button" title="Send message">
-                        ➤
+                    <button id="send-btn" class="send-button" title="Send message">
+                        Send ➤
                     </button>
                 </div>
-
-                <!-- Listening Indicator -->
-                <div id="listening-indicator" class="listening-indicator hidden">
-                    <div class="pulse-ring">
-                        <div class="pulse"></div>
-                    </div>
-                    <div class="listening-text">
-                        <strong>🔴 I'm Listening</strong>
-                        <span>Speak clearly, then wait...</span>
-                    </div>
-                </div>
                 
-                <!-- Voice Help Text -->
-                <div id="voice-help" class="voice-help hidden">
-                    <p>💡 <strong>How to use voice:</strong></p>
-                    <ol>
-                        <li>Tap the microphone button</li>
-                        <li>Speak clearly when you see "I'm Listening"</li>
-                        <li>Pause when done - I'll send your message automatically</li>
-                    </ol>
-                    <p class="voice-fallback">If voice doesn't work, you can always type your question below.</p>
+                <!-- Optional Voice (Experimental) -->
+                <div class="voice-option">
+                    <button id="mic-btn" class="voice-button" title="Try voice input">
+                        🎤 Or tap here to speak
+                    </button>
+                    <p class="voice-note">Voice works best in Chrome with internet</p>
+                </div>
+
+                <!-- Typing Help -->
+                <div class="typing-help">
+                    <p>💡 <strong>How to ask for help:</strong> Type your question below and tap the arrow button to send.</p>
                 </div>
 
                 <!-- Control Bar -->

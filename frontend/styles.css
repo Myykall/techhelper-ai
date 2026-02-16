@@ -339,21 +339,99 @@ body {
     display: flex;
     gap: 0.75rem;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
 }
 
 #message-input {
     flex: 1;
-    padding: 1rem 1.25rem;
-    font-size: 1.2rem;
-    border: 2px solid var(--border);
+    padding: 1.25rem 1.5rem;
+    font-size: 1.4rem;
+    border: 3px solid var(--border);
     border-radius: var(--radius-lg);
     outline: none;
     transition: border-color 0.2s;
+    min-height: 60px;
 }
 
 #message-input:focus {
     border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.send-button {
+    padding: 1.25rem 2rem;
+    font-size: 1.3rem;
+    font-weight: bold;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 60px;
+}
+
+.send-button:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.send-button:active {
+    transform: translateY(0);
+}
+
+/* ============== Voice Option (Secondary) ============== */
+
+.voice-option {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.voice-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-light);
+}
+
+.voice-button:hover {
+    border-color: var(--primary);
+    background: var(--bg);
+}
+
+.voice-button.recording {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+    animation: pulse 1s infinite;
+}
+
+.voice-note {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+/* ============== Typing Help ============== */
+
+.typing-help {
+    background: #f0fdf4;
+    border: 2px solid #22c55e;
+    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.typing-help p {
+    font-size: 1.1rem;
+    color: #166534;
+    margin: 0;
 }
 
 /* ============== Listening Indicator ============== */
@@ -373,41 +451,6 @@ body {
 
 .listening-indicator.hidden {
     display: none;
-}
-
-/* ============== Voice Help ============== */
-
-.voice-help {
-    background: #f0f9ff;
-    border: 2px solid #0ea5e9;
-    border-radius: var(--radius);
-    padding: 1rem 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.voice-help.hidden {
-    display: none;
-}
-
-.voice-help p {
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-}
-
-.voice-help ol {
-    margin-left: 1.5rem;
-    margin-bottom: 0.75rem;
-}
-
-.voice-help li {
-    margin-bottom: 0.25rem;
-    font-size: 0.95rem;
-}
-
-.voice-fallback {
-    color: var(--text-light);
-    font-style: italic;
-    font-size: 0.9rem !important;
 }
 
 .pulse-ring {

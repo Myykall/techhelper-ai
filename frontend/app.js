@@ -15,6 +15,9 @@ let recognition = null;
 let speakSlowly = false;
 let lastResponse = '';
 
+// Voice is optional - check support
+const voiceSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
 // ============== DOM Elements ==============
 const screens = {
     welcome: document.getElementById('welcome-screen'),
@@ -39,14 +42,10 @@ const elements = {
     quickBtns: document.querySelectorAll('.quick-btn')
 };
 
-// ============== Speech Synthesis ==============
+// ============== Speech Synthesis (AI talks back) ==============
 function speak(text) {
-    if (!window.speechSynthesis) {
-        console.warn('Speech synthesis not supported');
-        return;
-    }
+    if (!window.speechSynthesis) return;
     
-    // Cancel any current speech
     window.speechSynthesis.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
@@ -54,16 +53,9 @@ function speak(text) {
     utterance.pitch = 1;
     utterance.volume = 1;
     
-    // Try to find a good voice
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => 
-        v.lang.startsWith('en') && 
-        (v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Karen'))
-    ) || voices.find(v => v.lang.startsWith('en'));
-    
-    if (preferredVoice) {
-        utterance.voice = preferredVoice;
-    }
+    const preferredVoice = voices.find(v => v.lang.startsWith('en'));
+    if (preferredVoice) utterance.voice = preferredVoice;
     
     window.speechSynthesis.speak(utterance);
 }
@@ -72,93 +64,44 @@ function stopSpeaking() {
     window.speechSynthesis.cancel();
 }
 
-// ============== Speech Recognition ==============
-
+// ============== Speech Recognition (Optional - Voice Input) ==============
 function initSpeechRecognition() {
+    if (!voiceSupported) return false;
+    
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-        console.warn('Speech recognition not supported');
-        elements.micBtn.style.display = 'none';
-        return false;
-    }
-    
     recognition = new SpeechRecognition();
-    // Use non-continuous mode for better reliability
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
-    recognition.maxAlternatives = 1;
     
     recognition.onstart = () => {
         isRecording = true;
-        restartAttempts = 0;
         elements.micBtn.classList.add('recording');
-        elements.listeningIndicator.classList.remove('hidden');
-        elements.messageInput.placeholder = 'Listening... Speak now';
-        
-        console.log('Recording started - speak now!');
+        elements.micBtn.innerHTML = '🔴 Stop Recording';
+        elements.messageInput.placeholder = 'Listening... speak now';
     };
     
     recognition.onresult = (event) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-        
+        let transcript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-                finalTranscript += transcript;
-            } else {
-                interimTranscript += transcript;
-            }
+            transcript += event.results[i][0].transcript;
         }
-        
-        if (interimTranscript) {
-            elements.messageInput.value = interimTranscript;
-        }
-        
-        if (finalTranscript) {
-            elements.messageInput.value = finalTranscript;
-            elements.messageInput.placeholder = 'Got it! Tap mic again to send';
+        if (transcript) {
+            elements.messageInput.value = transcript;
         }
     };
     
     recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        
-        if (event.error === 'not-allowed') {
-            showMessage('error', 'Please allow microphone access in your browser settings.');
-            stopRecording();
-        } else if (event.error === 'network') {
-            console.log('Network error - speech recognition requires internet');
-            elements.messageInput.placeholder = 'Network issue. Please type instead.';
-            stopRecording();
-        } else if (event.error === 'no-speech') {
-            console.log('No speech detected');
-            elements.messageInput.placeholder = 'Did not hear anything. Try again?';
-            stopRecording();
-        } else if (event.error === 'audio-capture') {
-            showMessage('error', 'Cannot access microphone.');
-            stopRecording();
-        } else {
-            console.log('Speech error:', event.error);
-            stopRecording();
-        }
+        console.log('Voice error:', event.error);
+        stopRecording();
     };
     
     recognition.onend = () => {
-        console.log('Speech recognition ended');
-        
-        if (isRecording) {
-            // Still in recording mode - auto-send if we have text
-            const text = elements.messageInput.value.trim();
-            if (text) {
-                stopRecording();
-                sendMessage(text);
-            } else {
-                stopRecording();
-                elements.messageInput.placeholder = 'No speech detected. Please try again or type.';
-            }
+        stopRecording();
+        // Auto-send if captured text
+        const text = elements.messageInput.value.trim();
+        if (text) {
+            sendMessage(text);
         }
     };
     
@@ -168,12 +111,13 @@ function initSpeechRecognition() {
 function startRecording() {
     if (!recognition) {
         if (!initSpeechRecognition()) {
-            showMessage('error', 'Voice input is not supported on your device.');
+            alert('Voice input is not supported in your browser. Please type instead.');
             return;
         }
     }
     
     try {
+        elements.messageInput.value = '';
         recognition.start();
     } catch (e) {
         console.error('Failed to start recording:', e);
@@ -182,30 +126,23 @@ function startRecording() {
 
 function stopRecording() {
     isRecording = false;
-    
     if (recognition) {
         try {
             recognition.stop();
-        } catch (e) {
-            // Already stopped
-        }
+        } catch (e) {}
     }
-    elements.micBtn.classList.remove('recording');
-    elements.listeningIndicator.classList.add('hidden');
-    console.log('Recording stopped');
+    if (elements.micBtn) {
+        elements.micBtn.classList.remove('recording');
+        elements.micBtn.innerHTML = '🎤 Or tap here to speak';
+    }
+    elements.messageInput.placeholder = 'Tap here and type your question...';
 }
 
 // ============== WebSocket ==============
 function connectWebSocket() {
-    if (socket) {
-        socket.close();
-    }
+    if (socket) socket.close();
     
     socket = new WebSocket(`${WS_URL}/${sessionId}`);
-    
-    socket.onopen = () => {
-        console.log('Connected to assistant');
-    };
     
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -216,14 +153,9 @@ function connectWebSocket() {
             return;
         }
         
-        if (data.type === 'stats') {
-            // Update stats display (could show in UI)
-            console.log('Session cost:', data.session_cost);
-            return;
-        }
+        if (data.type === 'stats') return;
         
         if (data.chunk) {
-            // Streaming response
             updateStreamingMessage(data.chunk);
         }
         
@@ -232,13 +164,8 @@ function connectWebSocket() {
         }
     };
     
-    socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        showMessage('error', 'Connection error. Please try again.');
-    };
-    
-    socket.onclose = () => {
-        console.log('Disconnected from assistant');
+    socket.onerror = () => {
+        console.error('WebSocket error');
     };
 }
 
@@ -265,28 +192,22 @@ function showMessage(type, text) {
     scrollToBottom();
 }
 
-function startStreamingMessage() {
-    streamingMessageEl = document.createElement('div');
-    streamingMessageEl.className = 'message message-assistant';
-    
-    const bubbleEl = document.createElement('div');
-    bubbleEl.className = 'message-bubble';
-    streamingMessageEl.appendChild(bubbleEl);
-    
-    const timeEl = document.createElement('div');
-    timeEl.className = 'message-time';
-    timeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    streamingMessageEl.appendChild(timeEl);
-    
-    elements.messages.appendChild(streamingMessageEl);
-    streamingText = '';
-    
-    scrollToBottom();
-}
-
 function updateStreamingMessage(chunk) {
     if (!streamingMessageEl) {
-        startStreamingMessage();
+        streamingMessageEl = document.createElement('div');
+        streamingMessageEl.className = 'message message-assistant';
+        
+        const bubbleEl = document.createElement('div');
+        bubbleEl.className = 'message-bubble';
+        streamingMessageEl.appendChild(bubbleEl);
+        
+        const timeEl = document.createElement('div');
+        timeEl.className = 'message-time';
+        timeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        streamingMessageEl.appendChild(timeEl);
+        
+        elements.messages.appendChild(streamingMessageEl);
+        streamingText = '';
     }
     streamingText += chunk;
     streamingMessageEl.querySelector('.message-bubble').textContent = streamingText;
@@ -315,15 +236,14 @@ async function sendMessage(text) {
     showMessage('user', text);
     elements.messageInput.value = '';
     
-    // Show typing indicator
+    // Show typing
     elements.typingIndicator.classList.remove('hidden');
     scrollToBottom();
     
-    // Use WebSocket if connected, otherwise fallback to HTTP
+    // Use WebSocket or HTTP fallback
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ message: text }));
     } else {
-        // Fallback to HTTP
         try {
             const response = await fetch(`${API_URL}/chat`, {
                 method: 'POST',
@@ -335,9 +255,7 @@ async function sendMessage(text) {
                 })
             });
             
-            if (!response.ok) {
-                throw new Error('Failed to get response');
-            }
+            if (!response.ok) throw new Error('Failed');
             
             const data = await response.json();
             sessionId = data.session_id;
@@ -347,8 +265,7 @@ async function sendMessage(text) {
             lastResponse = data.response;
             
         } catch (error) {
-            console.error('Error:', error);
-            showMessage('error', 'Sorry, I had trouble connecting. Please try again.');
+            showMessage('error', 'Sorry, connection issue. Please try again.');
         } finally {
             elements.typingIndicator.classList.add('hidden');
         }
@@ -358,7 +275,6 @@ async function sendMessage(text) {
 // ============== Session Management ==============
 async function startSession() {
     try {
-        // Create a new session
         const response = await fetch(`${API_URL}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -368,21 +284,18 @@ async function startSession() {
         const data = await response.json();
         sessionId = data.session_id;
         
-        // Switch to chat screen
+        // Switch screens
         screens.welcome.classList.remove('active');
         screens.chat.classList.add('active');
         
-        // Connect WebSocket
         connectWebSocket();
         
-        // Show greeting
         showMessage('assistant', data.response);
         speak(data.response);
         lastResponse = data.response;
         
     } catch (error) {
-        console.error('Error starting session:', error);
-        alert('Could not connect to the service. Please try again later.');
+        alert('Could not connect. Please try again.');
     }
 }
 
@@ -398,14 +311,12 @@ async function requestHumanHelp() {
         });
         
         const data = await response.json();
-        
         hideHumanHelpModal();
         showMessage('assistant', data.message);
         speak(data.message);
         
     } catch (error) {
-        console.error('Error requesting help:', error);
-        showMessage('error', 'Could not request help. Please call 1-800-TECH-HELP directly.');
+        showMessage('error', 'Could not request help. Please call 1-800-TECH-HELP.');
     }
 }
 
@@ -435,17 +346,16 @@ function initEventListeners() {
         }
     });
     
-    // Microphone - Simple start/stop
-    elements.micBtn.addEventListener('click', () => {
-        if (isRecording) {
-            // User wants to stop early
-            stopRecording();
-        } else {
-            // Start recording
-            elements.messageInput.value = '';
-            startRecording();
-        }
-    });
+    // Microphone (optional)
+    if (elements.micBtn) {
+        elements.micBtn.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+    }
     
     // Quick buttons
     elements.quickBtns.forEach(btn => {
@@ -484,7 +394,6 @@ function initEventListeners() {
     elements.confirmHelpBtn.addEventListener('click', requestHumanHelp);
     elements.cancelHelpBtn.addEventListener('click', hideHumanHelpModal);
     
-    // Close modal on backdrop click
     elements.humanHelpModal.addEventListener('click', (e) => {
         if (e.target === elements.humanHelpModal) {
             hideHumanHelpModal();
@@ -505,11 +414,17 @@ function init() {
         };
     }
     
+    // Hide voice if not supported
+    if (!voiceSupported) {
+        const voiceOption = document.querySelector('.voice-option');
+        if (voiceOption) voiceOption.style.display = 'none';
+    }
+    
     initSpeechRecognition();
     initEventListeners();
     
-    console.log('🤖 TechHelper AI loaded');
+    console.log('🤖 TechHelper AI loaded. Voice:', voiceSupported ? 'Yes' : 'No');
 }
 
-// Start when DOM is ready
+// Start
 document.addEventListener('DOMContentLoaded', init);
