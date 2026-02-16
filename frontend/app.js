@@ -73,9 +73,6 @@ function stopSpeaking() {
 }
 
 // ============== Speech Recognition ==============
-let recordingTimeout = null;
-let restartAttempts = 0;
-const MAX_RESTART_ATTEMPTS = 3;
 
 function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -87,38 +84,20 @@ function initSpeechRecognition() {
     }
     
     recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    // Use non-continuous mode for better reliability
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
-    // Increase timeout - some browsers stop after silence
-    // Note: maxAlternatives not standard but try anyway
+    recognition.maxAlternatives = 1;
     
     recognition.onstart = () => {
         isRecording = true;
         restartAttempts = 0;
         elements.micBtn.classList.add('recording');
         elements.listeningIndicator.classList.remove('hidden');
-        elements.messageInput.placeholder = 'Listening... Speak clearly';
+        elements.messageInput.placeholder = 'Listening... Speak now';
         
-        // Clear any existing timeout
-        if (recordingTimeout) {
-            clearTimeout(recordingTimeout);
-        }
-        
-        // Auto-stop after 30 seconds of recording (safety)
-        recordingTimeout = setTimeout(() => {
-            if (isRecording) {
-                console.log('Auto-stopping after 30 seconds');
-                stopRecording();
-                // Auto-send if there's text
-                const text = elements.messageInput.value.trim();
-                if (text) {
-                    sendMessage(text);
-                }
-            }
-        }, 30000);
-        
-        console.log('Recording started - tap microphone again when done speaking');
+        console.log('Recording started - speak now!');
     };
     
     recognition.onresult = (event) => {
@@ -140,46 +119,46 @@ function initSpeechRecognition() {
         
         if (finalTranscript) {
             elements.messageInput.value = finalTranscript;
-            // Update placeholder to show we're still listening
-            elements.messageInput.placeholder = 'Still listening... tap mic when done';
+            elements.messageInput.placeholder = 'Got it! Tap mic again to send';
         }
     };
     
     recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         
-        // Don't stop for 'no-speech' or 'audio-capture' errors, just log them
         if (event.error === 'not-allowed') {
-            showMessage('error', 'Please allow microphone access to use voice input.');
+            showMessage('error', 'Please allow microphone access in your browser settings.');
             stopRecording();
         } else if (event.error === 'network') {
-            showMessage('error', 'Network error. Please try typing instead.');
+            console.log('Network error - speech recognition requires internet');
+            elements.messageInput.placeholder = 'Network issue. Please type instead.';
+            stopRecording();
+        } else if (event.error === 'no-speech') {
+            console.log('No speech detected');
+            elements.messageInput.placeholder = 'Did not hear anything. Try again?';
+            stopRecording();
+        } else if (event.error === 'audio-capture') {
+            showMessage('error', 'Cannot access microphone.');
+            stopRecording();
+        } else {
+            console.log('Speech error:', event.error);
             stopRecording();
         }
-        // For other errors like 'no-speech', 'aborted', we try to restart
     };
     
     recognition.onend = () => {
-        console.log('Speech recognition ended, isRecording:', isRecording);
+        console.log('Speech recognition ended');
         
-        if (isRecording && restartAttempts < MAX_RESTART_ATTEMPTS) {
-            // Try to restart if we're still supposed to be recording
-            restartAttempts++;
-            console.log('Attempting to restart recording, attempt:', restartAttempts);
-            
-            setTimeout(() => {
-                try {
-                    if (isRecording && recognition) {
-                        recognition.start();
-                    }
-                } catch (e) {
-                    console.error('Failed to restart:', e);
-                    stopRecording();
-                }
-            }, 100);
-        } else if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
-            console.log('Max restart attempts reached, stopping');
-            stopRecording();
+        if (isRecording) {
+            // Still in recording mode - auto-send if we have text
+            const text = elements.messageInput.value.trim();
+            if (text) {
+                stopRecording();
+                sendMessage(text);
+            } else {
+                stopRecording();
+                elements.messageInput.placeholder = 'No speech detected. Please try again or type.';
+            }
         }
     };
     
@@ -203,24 +182,16 @@ function startRecording() {
 
 function stopRecording() {
     isRecording = false;
-    restartAttempts = 0;
-    
-    if (recordingTimeout) {
-        clearTimeout(recordingTimeout);
-        recordingTimeout = null;
-    }
     
     if (recognition) {
         try {
             recognition.stop();
-            recognition.abort(); // Force stop
         } catch (e) {
             // Already stopped
         }
     }
     elements.micBtn.classList.remove('recording');
     elements.listeningIndicator.classList.add('hidden');
-    elements.messageInput.placeholder = 'Type your question here...';
     console.log('Recording stopped');
 }
 
@@ -464,25 +435,14 @@ function initEventListeners() {
         }
     });
     
-    // Microphone - Toggle recording
+    // Microphone - Simple start/stop
     elements.micBtn.addEventListener('click', () => {
         if (isRecording) {
-            // Stop recording and auto-send if we have text
-            const message = elements.messageInput.value.trim();
+            // User wants to stop early
             stopRecording();
-            
-            if (message) {
-                console.log('Auto-sending voice message:', message);
-                sendMessage(message);
-            } else {
-                // No text captured, let user know
-                elements.messageInput.placeholder = 'No speech detected. Please try again.';
-                speak('I did not hear anything. Please try speaking again.');
-            }
         } else {
-            // Clear any previous text and start fresh
+            // Start recording
             elements.messageInput.value = '';
-            elements.messageInput.placeholder = 'Listening... Speak now';
             startRecording();
         }
     });

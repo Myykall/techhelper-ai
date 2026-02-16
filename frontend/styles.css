@@ -375,6 +375,41 @@ body {
     display: none;
 }
 
+/* ============== Voice Help ============== */
+
+.voice-help {
+    background: #f0f9ff;
+    border: 2px solid #0ea5e9;
+    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.voice-help.hidden {
+    display: none;
+}
+
+.voice-help p {
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.voice-help ol {
+    margin-left: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.voice-help li {
+    margin-bottom: 0.25rem;
+    font-size: 0.95rem;
+}
+
+.voice-fallback {
+    color: var(--text-light);
+    font-style: italic;
+    font-size: 0.9rem !important;
+}
+
 .pulse-ring {
     position: relative;
     width: 50px;
